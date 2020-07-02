@@ -21,7 +21,7 @@ let load_sexp label conv file =
   Logs.debug (fun l -> l "Reading file %a for %s" Fpath.pp file label);
   OS.File.read file >>= fun b ->
   try Sexplib.Sexp.of_string b |> conv |> R.ok
-  with exn -> R.error_msg (Fmt.strf "Error parsing %a: %s" Fpath.pp file (Printexc.to_string exn))
+  with exn -> R.error_msgf "Error parsing %a: %a" Fpath.pp file Fmt.exn exn
 
 let save_sexp label conv file v =
   Logs.debug (fun l -> l "Writing file %a for %s" Fpath.pp file label);
@@ -29,3 +29,15 @@ let save_sexp label conv file v =
   OS.File.write file (b ^ "\n")
 
 let write_lines_hum path content = OS.File.write_lines path (content @ [ "" ])
+
+let load_opam label conv file =
+  Logs.debug (fun l -> l "Reading file %a for %s" Fpath.pp file label);
+  let opam = file |> Fpath.to_string |> OpamFilename.of_string |> OpamFile.make in
+  try opam |> OpamFile.OPAM.read |> conv |> R.ok
+  with exn -> R.error_msgf "Error parsing %a: %a" Fpath.pp file Fmt.exn exn
+
+let save_opam label conv file v =
+  Logs.debug (fun l -> l "Writing file %a for %s" Fpath.pp file label);
+  let opam = file |> Fpath.to_string |> OpamFilename.of_string |> OpamFile.make in
+  try OpamFile.OPAM.write opam (conv v) |> R.ok
+  with exn -> R.error_msgf "Error saving %a: %a" Fpath.pp file Fmt.exn exn

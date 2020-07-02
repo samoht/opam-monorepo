@@ -168,47 +168,45 @@ end
 (** duniverse knows about which tools to use, and can calculate a set of allowable versions
     by inspecting the repo metadata *)
 module Tools = struct
-
-  type version =
-     | Eq of string
-     | Latest
-     | Min of string
-  [@@deriving sexp]
+  type version = Eq of string | Latest | Min of string [@@deriving sexp]
 
   type t = {
-    opam: version;
-    ocamlformat: version;
-    dune: version;
-    odoc: version;
-    mdx: version;
-    lsp: version;
-    merlin: version;
-   } [@@deriving sexp]
+    opam : version;
+    ocamlformat : version;
+    dune : version;
+    odoc : version;
+    mdx : version;
+    lsp : version;
+    merlin : version;
+  }
+  [@@deriving sexp]
 
-  let tools = [
-    ("base", ["opam"; "odoc"; "mdx"]);
-    ("ocamlformat", ["ocamlformat"]);
-    (* ("lsp", ["ocaml-lsp-server"]); TODO broken *)
-    ("merlin", ["merlin"])]
+  let tools =
+    [
+      ("base", [ "opam"; "odoc"; "mdx" ]);
+      ("ocamlformat", [ "ocamlformat" ]);
+      (* ("lsp", ["ocaml-lsp-server"]); TODO broken *)
+      ("merlin", [ "merlin" ]);
+    ]
 
   (** Calculate a version of this tool by looking at repo metadata *)
-  let of_repo () = (* TODO expose CLI overrides *)
-     let ocamlformat =
-       match Bos.OS.File.read_lines (Fpath.v ".ocamlformat") with
-       | Ok f -> begin
-               List.filter_map ~f:(Astring.String.cut ~sep:"=") f |>
-               List.assoc_opt "version" |> begin
-                function
-               | Some v -> Eq v
-               | None -> Latest
-               end
-              end
-       | Error (`Msg _) -> Latest
-     in
-    let dune = Latest in (* TODO check for minimum in dune-project *)
-    let odoc = Latest in (* No real version constraints on odoc *)
-    let opam = Latest in (* No real version constraints on opam *)
-    let mdx = Latest in 
+  let of_repo () =
+    (* TODO expose CLI overrides *)
+    let ocamlformat =
+      match Bos.OS.File.read_lines (Fpath.v ".ocamlformat") with
+      | Ok f -> (
+          List.filter_map ~f:(Astring.String.cut ~sep:"=") f |> List.assoc_opt "version" |> function
+          | Some v -> Eq v
+          | None -> Latest )
+      | Error (`Msg _) -> Latest
+    in
+    let dune = Latest in
+    (* TODO check for minimum in dune-project *)
+    let odoc = Latest in
+    (* No real version constraints on odoc *)
+    let opam = Latest in
+    (* No real version constraints on opam *)
+    let mdx = Latest in
     let lsp = Latest in
     let merlin = Latest in
     { ocamlformat; dune; odoc; opam; mdx; lsp; merlin }
@@ -218,21 +216,25 @@ module Config = struct
   type pull_mode = Submodules | Source [@@deriving sexp]
 
   type t = {
-    version: string;
+    version : string;
     root_packages : Types.Opam.package list;
     pins : Types.Opam.pin list; [@default []] [@sexp_drop_default.sexp]
     pull_mode : pull_mode; [@default Source]
     opam_repo : Uri_sexp.t;
         [@default Uri.of_string Config.duniverse_opam_repo] [@sexp_drop_default.sexp]
     ocaml_compilers : string list; [@default []]
-    tools: Tools.t;
+    tools : Tools.t;
   }
   [@@deriving sexp] [@@sexp.allow_extra_fields]
 end
 
 type t = { config : Config.t; deps : resolved Deps.t; depexts : Depexts.t } [@@deriving sexp]
 
-let load ~file = Persist.load_sexp "duniverse" t_of_sexp file
+let of_opam : OpamFile.OPAM.t -> t = assert false
+
+let to_opam : t -> OpamFile.OPAM.t = fun _ -> OpamFile.OPAM.empty
+
+let load ~file = Persist.load_opam "duniverse" of_opam file
 
 let sort ({ deps = { opamverse; duniverse }; _ } as t) =
   let sorted_opamverse =
@@ -247,4 +249,4 @@ let sort ({ deps = { opamverse; duniverse }; _ } as t) =
   in
   { t with deps = { opamverse = sorted_opamverse; duniverse = sorted_duniverse } }
 
-let save ~file t = Persist.save_sexp "duniverse" sexp_of_t file (sort t)
+let save ~file t = Persist.save_opam "duniverse" to_opam file (sort t)
