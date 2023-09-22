@@ -225,32 +225,12 @@ url {
 |};
         {|
 opam-version: "2.0"
-name: "p2"
-version: "1"
-dev-repo: "x"
-url {
-  src: "https://p.com/p.tbz"
-  checksum: "sha256=0000000000000000000000000000000000000000000000000000000000000001"
-}
-|};
-        {|
-opam-version: "2.0"
 name: "ocaml-base-compiler"
 version: "3.14"
 |};
         {|
 opam-version: "2.0"
 name: "p1"
-version: "2"
-dev-repo: "x"
-url {
-  src: "https://p.com/p.tbz"
-  checksum: "sha256=0000000000000000000000000000000000000000000000000000000000000002"
-}
-|};
-        {|
-opam-version: "2.0"
-name: "p2"
 version: "2"
 dev-repo: "x"
 url {

@@ -241,39 +241,43 @@ module Opam_monorepo_context (Base_context : BASE_CONTEXT) :
       (OpamPackage.Version.to_string (OpamFile.OPAM.version pkg))
 
   let with_conflict pkg =
-    let name = OpamFile.OPAM.name pkg in
-    let version = OpamFile.OPAM.version pkg in
-    let hashes = hashes pkg in
-    let entry = (name, version, hashes) in
-    match OpamFile.OPAM.dev_repo pkg with
-    | None -> pkg
-    | Some dev_repo ->
-        let dev_repo = Dev_repo.from_string (OpamUrl.to_string dev_repo) in
-        let in_conflicts =
-          match Dev_repo.Tbl.find_all dev_repos dev_repo with
-          | [] ->
-              Fmt.epr "XXX add %a to %a\n%!" pp_pkg pkg Dev_repo.pp dev_repo;
-              Dev_repo.Tbl.add dev_repos dev_repo entry;
-              []
-          | conflicts ->
-              if not (List.mem entry ~set:conflicts) then (
-                Fmt.epr "XXX add %a to %a\n%!" pp_pkg pkg Dev_repo.pp dev_repo;
-                Dev_repo.Tbl.add dev_repos dev_repo entry);
-              (* remove packages from the same repo *)
-              conflicts_with_same_dev_repo_but_a_different_hash entry conflicts
-        in
-        let conflicts =
-          in_conflicts
-          |> List.map ~f:(fun (name, version, _) ->
-                 let version =
-                   let open OpamTypes in
-                   let v = OpamPackage.Version.to_string version in
-                   OpamFormula.Atom (Constraint (`Eq, FString v))
-                 in
-                 OpamFormula.Atom (name, version))
-          |> OpamFormula.ors
-        in
-        OpamFile.OPAM.with_conflicts conflicts pkg
+    match hashes pkg with
+    | [] -> pkg
+    | hashes -> (
+        let name = OpamFile.OPAM.name pkg in
+        let version = OpamFile.OPAM.version pkg in
+        let entry = (name, version, hashes) in
+        match OpamFile.OPAM.dev_repo pkg with
+        | None -> pkg
+        | Some dev_repo ->
+            let dev_repo = Dev_repo.from_string (OpamUrl.to_string dev_repo) in
+            let in_conflicts =
+              match Dev_repo.Tbl.find_all dev_repos dev_repo with
+              | [] ->
+                  Fmt.epr "XXX add %a to %a\n%!" pp_pkg pkg Dev_repo.pp dev_repo;
+                  Dev_repo.Tbl.add dev_repos dev_repo entry;
+                  []
+              | conflicts ->
+                  if not (List.mem entry ~set:conflicts) then (
+                    Fmt.epr "XXX add %a to %a\n%!" pp_pkg pkg Dev_repo.pp
+                      dev_repo;
+                    Dev_repo.Tbl.add dev_repos dev_repo entry);
+                  (* remove packages from the same repo *)
+                  conflicts_with_same_dev_repo_but_a_different_hash entry
+                    conflicts
+            in
+            let conflicts =
+              in_conflicts
+              |> List.map ~f:(fun (name, version, _) ->
+                     let version =
+                       let open OpamTypes in
+                       let v = OpamPackage.Version.to_string version in
+                       OpamFormula.Atom (Constraint (`Eq, FString v))
+                     in
+                     OpamFormula.Atom (name, version))
+              |> OpamFormula.ors
+            in
+            OpamFile.OPAM.with_conflicts conflicts pkg)
 
   let add_url_conflicts pkgs =
     List.map
