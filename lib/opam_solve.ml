@@ -235,6 +235,11 @@ module Opam_monorepo_context (Base_context : BASE_CONTEXT) :
           Hashtbl.add memo (name, version) r;
           r
 
+  let pp_pkg ppf pkg =
+    Fmt.pf ppf "%s.%s"
+      (OpamPackage.Name.to_string (OpamFile.OPAM.name pkg))
+      (OpamPackage.Version.to_string (OpamFile.OPAM.version pkg))
+
   let with_conflict pkg =
     let name = OpamFile.OPAM.name pkg in
     let version = OpamFile.OPAM.version pkg in
@@ -247,11 +252,13 @@ module Opam_monorepo_context (Base_context : BASE_CONTEXT) :
         let in_conflicts =
           match Dev_repo.Tbl.find_all dev_repos dev_repo with
           | [] ->
+              Fmt.epr "XXX add %a to %a\n%!" pp_pkg pkg Dev_repo.pp dev_repo;
               Dev_repo.Tbl.add dev_repos dev_repo entry;
               []
           | conflicts ->
-              if not (List.mem entry ~set:conflicts) then
-                Dev_repo.Tbl.add dev_repos dev_repo entry;
+              if not (List.mem entry ~set:conflicts) then (
+                Fmt.epr "XXX add %a to %a\n%!" pp_pkg pkg Dev_repo.pp dev_repo;
+                Dev_repo.Tbl.add dev_repos dev_repo entry);
               (* remove packages from the same repo *)
               conflicts_with_same_dev_repo_but_a_different_hash entry conflicts
         in

@@ -204,6 +204,85 @@ depends: ["p1" "p2"]
   calculate universe root
     [ ("ocaml-base-compiler", "3.14"); ("p1", "1"); ("p2", "1"); ("root", "0") ]
 
+let no_conflict_with_pin () =
+  let universe =
+    List.map OpamFile.OPAM.read_from_string
+      [
+        {|
+opam-version: "2.0"
+name: "ocaml-base-compiler"
+version: "3.14"
+|};
+        {|
+opam-version: "2.0"
+name: "p1"
+version: "1"
+dev-repo: "x"
+url {
+  src: "https://p.com/p.tbz"
+  checksum: "sha256=0000000000000000000000000000000000000000000000000000000000000001"
+}
+|};
+        {|
+opam-version: "2.0"
+name: "p2"
+version: "1"
+dev-repo: "x"
+url {
+  src: "https://p.com/p.tbz"
+  checksum: "sha256=0000000000000000000000000000000000000000000000000000000000000001"
+}
+|};
+        {|
+opam-version: "2.0"
+name: "ocaml-base-compiler"
+version: "3.14"
+|};
+        {|
+opam-version: "2.0"
+name: "p1"
+version: "2"
+dev-repo: "x"
+url {
+  src: "https://p.com/p.tbz"
+  checksum: "sha256=0000000000000000000000000000000000000000000000000000000000000002"
+}
+|};
+        {|
+opam-version: "2.0"
+name: "p2"
+version: "2"
+dev-repo: "x"
+url {
+  src: "https://p.com/p.tbz"
+  checksum: "sha256=0000000000000000000000000000000000000000000000000000000000000002"
+}
+|};
+        {|
+opam-version: "2.0"
+name: "p2"
+version: "dev"
+dev-repo: "x"
+url {
+  src: "git+https://x#hash"
+}
+|};
+      ]
+  in
+  let root =
+    OpamFile.OPAM.read_from_string
+      {|
+opam-version: "2.0"
+name: "root"
+version: "0"
+depends: ["p1" "p2"]
+|}
+  in
+  calculate universe root
+    [
+      ("ocaml-base-compiler", "3.14"); ("p1", "2"); ("p2", "dev"); ("root", "0");
+    ]
+
 let suite =
   ( "solve",
     [
@@ -211,4 +290,5 @@ let suite =
       Alcotest.test_case "conflicts" `Quick conflicts;
       Alcotest.test_case "conflict_class" `Quick conflict_class;
       Alcotest.test_case "conflict_url" `Quick conflict_url;
+      Alcotest.test_case "no_conflict_with_pin" `Quick no_conflict_with_pin;
     ] )
